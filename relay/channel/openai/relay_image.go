@@ -142,7 +142,12 @@ func OpenaiImageStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp 
 	// StreamScannerHandler consumes the upstream [DONE]; re-emit it so the
 	// client still receives a terminal data: [DONE].
 	if info.StreamStatus != nil && info.StreamStatus.EndReason == relaycommon.StreamEndReasonDone {
-		helper.Done(c)
+		if err := helper.WithWriteDeadline(c, func() error {
+			return helper.StringData(c, "[DONE]")
+		}); err != nil {
+			info.StreamStatus.RecordError(err.Error())
+			logger.LogError(c, "image stream done write error: "+err.Error())
+		}
 	}
 
 	applyUsagePostProcessing(info, usage, lastStreamData)

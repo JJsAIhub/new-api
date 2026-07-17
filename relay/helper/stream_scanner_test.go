@@ -46,6 +46,26 @@ func setupStreamTest(t *testing.T, body io.Reader) (*gin.Context, *http.Response
 	return c, resp, info
 }
 
+type deadlineRecordingResponseWriter struct {
+	gin.ResponseWriter
+
+	mu        sync.Mutex
+	deadlines []time.Time
+}
+
+func (w *deadlineRecordingResponseWriter) SetWriteDeadline(deadline time.Time) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.deadlines = append(w.deadlines, deadline)
+	return nil
+}
+
+func (w *deadlineRecordingResponseWriter) recordedDeadlines() []time.Time {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return append([]time.Time(nil), w.deadlines...)
+}
+
 func buildSSEBody(n int) string {
 	var b strings.Builder
 	for i := 0; i < n; i++ {
@@ -150,6 +170,21 @@ func TestStreamScannerHandler_DoneStopsScanner(t *testing.T) {
 	})
 
 	assert.Equal(t, int64(50), count.Load(), "data after [DONE] must not be processed")
+}
+
+func TestStreamScannerHandler_ClearsWriteDeadlineAfterChunk(t *testing.T) {
+	c, resp, info := setupStreamTest(t, strings.NewReader("data: {\"id\":1}\ndata: [DONE]\n"))
+	writer := &deadlineRecordingResponseWriter{ResponseWriter: c.Writer}
+	c.Writer = writer
+
+	StreamScannerHandler(c, resp, info, func(data string, sr *StreamResult) {
+		_ = StringData(c, data)
+	})
+
+	deadlines := writer.recordedDeadlines()
+	require.Len(t, deadlines, 2)
+	assert.False(t, deadlines[0].IsZero(), "stream writes must be bounded")
+	assert.True(t, deadlines[1].IsZero(), "successful stream writes must clear their deadline")
 }
 
 func TestStreamScannerHandler_StopStopsStream(t *testing.T) {

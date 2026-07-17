@@ -64,14 +64,28 @@ func copyCodexSSEHeaders(c *gin.Context, resp *http.Response) {
 	}
 }
 
-// ExtendWriteDeadline pushes the connection write deadline forward before each
-// stream write. Best-effort: writers that don't support deadlines (e.g.
-// httptest recorders) are silently ignored.
-func ExtendWriteDeadline(c *gin.Context) {
-	if c == nil || c.Writer == nil {
-		return
+// WithWriteDeadline bounds one stream write and clears the deadline before
+// returning so idle time between successful writes does not expire the
+// downstream connection. Writers without deadline support remain best-effort.
+func WithWriteDeadline(c *gin.Context, write func() error) (err error) {
+	if write == nil {
+		return nil
 	}
-	_ = http.NewResponseController(c.Writer).SetWriteDeadline(time.Now().Add(streamWriteTimeout))
+	if c == nil || c.Writer == nil {
+		return write()
+	}
+
+	controller := http.NewResponseController(c.Writer)
+	if errSet := controller.SetWriteDeadline(time.Now().Add(streamWriteTimeout)); errSet != nil {
+		return write()
+	}
+	defer func() {
+		if errClear := controller.SetWriteDeadline(time.Time{}); err == nil && errClear != nil {
+			err = fmt.Errorf("clear stream write deadline failed: %w", errClear)
+		}
+	}()
+
+	return write()
 }
 
 func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo, dataHandler func(data string, sr *StreamResult)) {
@@ -172,8 +186,9 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 					func() {
 						writeMutex.Lock()
 						defer writeMutex.Unlock()
-						ExtendWriteDeadline(c)
-						err = PingData(c)
+						err = WithWriteDeadline(c, func() error {
+							return PingData(c)
+						})
 					}()
 					if err != nil {
 						logger.LogError(c, "ping data error: "+err.Error())
@@ -211,12 +226,17 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 		sr := newStreamResult(info.StreamStatus)
 		for data := range dataChan {
 			sr.reset()
-			func() {
+			errWrite := func() error {
 				writeMutex.Lock()
 				defer writeMutex.Unlock()
-				ExtendWriteDeadline(c)
-				dataHandler(data, sr)
+				return WithWriteDeadline(c, func() error {
+					dataHandler(data, sr)
+					return nil
+				})
 			}()
+			if errWrite != nil {
+				sr.Stop(errWrite)
+			}
 			if sr.IsStopped() {
 				return
 			}

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/QuantumNous/new-api/constant"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
@@ -185,6 +186,26 @@ type cancelAfterWriter struct {
 	once   sync.Once
 }
 
+type deadlineRecordingImageWriter struct {
+	gin.ResponseWriter
+
+	mu        sync.Mutex
+	deadlines []time.Time
+}
+
+func (w *deadlineRecordingImageWriter) SetWriteDeadline(deadline time.Time) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.deadlines = append(w.deadlines, deadline)
+	return nil
+}
+
+func (w *deadlineRecordingImageWriter) recordedDeadlines() []time.Time {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return append([]time.Time(nil), w.deadlines...)
+}
+
 func (w *cancelAfterWriter) Write(p []byte) (int, error) {
 	n, err := w.ResponseWriter.Write(p)
 	if strings.Contains(string(p), w.needle) {
@@ -246,6 +267,33 @@ func TestOpenaiImageStreamHandlerClientDisconnectKeepsRequestedCount(t *testing.
 		info.StreamStatus.EndReason)
 	require.Contains(t, recorder.Body.String(), `"b64_json":"first"`)
 	require.Equal(t, 3.0, info.PriceData.OtherRatios()["n"], "client abort must not reduce the billed image count")
+}
+
+func TestOpenaiImageStreamHandlerBoundsAndClearsFinalDoneWrite(t *testing.T) {
+	oldTimeout := constant.StreamingTimeout
+	constant.StreamingTimeout = 30
+	t.Cleanup(func() { constant.StreamingTimeout = oldTimeout })
+
+	body := strings.Join([]string{
+		`data: {"type":"image_edit.partial_image","partial_image_index":0,"b64_json":"partial"}`,
+		``,
+		`data: [DONE]`,
+		``,
+	}, "\n")
+	c, _, resp, info := newImageTestContext(t, body, "text/event-stream", true)
+	writer := &deadlineRecordingImageWriter{ResponseWriter: c.Writer}
+	c.Writer = writer
+
+	usage, err := OpenaiImageStreamHandler(c, info, resp)
+
+	require.Nil(t, err)
+	require.NotNil(t, usage)
+	deadlines := writer.recordedDeadlines()
+	require.Len(t, deadlines, 4)
+	require.False(t, deadlines[0].IsZero(), "partial image write must be bounded")
+	require.True(t, deadlines[1].IsZero(), "partial image write must clear its deadline")
+	require.False(t, deadlines[2].IsZero(), "terminal DONE write must be bounded")
+	require.True(t, deadlines[3].IsZero(), "terminal DONE write must clear its deadline")
 }
 
 // TestOpenaiImageStreamHandlerClientDisconnectRaisesCount covers the other

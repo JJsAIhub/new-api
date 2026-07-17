@@ -460,8 +460,9 @@ func sendPingData(c *gin.Context, mutex *sync.Mutex) error {
 
 	// Bound the write so a slow client cannot block this goroutine forever;
 	// doRequest's defer waits for the pinger to exit before returning.
-	helper.ExtendWriteDeadline(c)
-	err := helper.PingData(c)
+	err := helper.WithWriteDeadline(c, func() error {
+		return helper.PingData(c)
+	})
 	if err != nil {
 		logger.LogError(c, "SSE ping error: "+err.Error())
 		return err
