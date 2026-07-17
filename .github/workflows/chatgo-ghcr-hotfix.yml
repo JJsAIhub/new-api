@@ -31,7 +31,7 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          tags: ghcr.io/jjsaihub/new-api:fix-stream-deadline-bde9b2f-20260717
+          tags: ghcr.io/jjsaihub/new-api-hotfix:fix-stream-deadline-bde9b2f-20260717
           labels: |
             org.opencontainers.image.source=https://github.com/JJsAIhub/new-api
             org.opencontainers.image.revision=b101a679a9d540f6c10a4cfe0e27c0d3f8092bf0
@@ -42,4 +42,4 @@ jobs:
           sbom: true
 
       - name: Record image digest
-        run: echo "ghcr.io/jjsaihub/new-api@${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
+        run: echo "ghcr.io/jjsaihub/new-api-hotfix@${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
