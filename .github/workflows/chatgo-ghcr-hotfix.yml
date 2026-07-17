@@ -31,10 +31,10 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          tags: ghcr.io/jjsaihub/new-api-hotfix:fix-stream-deadline-bde9b2f-20260717
+          tags: ghcr.io/jjsaihub/new-api-hotfix:fix-stream-deadline-bde9b2f-20260717-r2
           labels: |
             org.opencontainers.image.source=https://github.com/JJsAIhub/new-api
-            org.opencontainers.image.revision=b101a679a9d540f6c10a4cfe0e27c0d3f8092bf0
+            org.opencontainers.image.revision=b101a67954f9b62ffde54117d0b2b6f967997b85
             org.opencontainers.image.base.revision=bde9b2f44887d34ec54799ae191d50f97914359e
           cache-from: type=gha
           cache-to: type=gha,mode=max
