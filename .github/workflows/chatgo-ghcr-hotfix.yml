@@ -31,7 +31,7 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          tags: ghcr.io/jjsaihub/new-api:waffo-cny-${{ github.sha }}
+          tags: ghcr.io/jjsaihub/new-api-hotfix:waffo-cny-${{ github.sha }}
           labels: |
             org.opencontainers.image.source=https://github.com/JJsAIhub/new-api
             org.opencontainers.image.revision=${{ github.sha }}
@@ -42,4 +42,4 @@ jobs:
           sbom: true
 
       - name: Record image digest
-        run: echo "ghcr.io/jjsaihub/new-api@${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
+        run: echo "ghcr.io/jjsaihub/new-api-hotfix@${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
