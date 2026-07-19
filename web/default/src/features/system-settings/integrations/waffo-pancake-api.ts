@@ -75,11 +75,13 @@ export async function createWaffoPancakePair(params: {
   merchantID: string
   privateKey: string
   returnURL: string
+  topUpCurrency: string
 }): Promise<PairResponse> {
   const res = await api.post<PairResponse>('/api/option/waffo-pancake/pair', {
     merchant_id: params.merchantID,
     private_key: params.privateKey,
     return_url: params.returnURL,
+    top_up_currency: params.topUpCurrency,
   })
   return res.data
 }
@@ -90,6 +92,7 @@ export async function saveWaffoPancakeConfig(params: {
   returnURL: string
   storeID: string
   productID: string
+  topUpCurrency: string
 }): Promise<SaveResponse> {
   const res = await api.post<SaveResponse>('/api/option/waffo-pancake/save', {
     merchant_id: params.merchantID,
@@ -97,6 +100,7 @@ export async function saveWaffoPancakeConfig(params: {
     return_url: params.returnURL,
     store_id: params.storeID,
     product_id: params.productID,
+    top_up_currency: params.topUpCurrency,
   })
   return res.data
 }

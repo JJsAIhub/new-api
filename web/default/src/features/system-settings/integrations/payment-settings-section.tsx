@@ -176,6 +176,7 @@ const paymentSchema = z.object({
   WaffoPancakeMerchantID: z.string(),
   WaffoPancakePrivateKey: z.string(),
   WaffoPancakeReturnURL: z.string(),
+  WaffoPancakeTopUpCurrency: z.enum(['USD', 'CNY']),
 })
 
 type PaymentFormValues = z.infer<typeof paymentSchema>
@@ -457,6 +458,7 @@ export function PaymentSettingsSection({
       WaffoPancakeReturnURL: removeTrailingSlash(
         values.WaffoPancakeReturnURL.trim()
       ),
+      WaffoPancakeTopUpCurrency: values.WaffoPancakeTopUpCurrency,
     }
 
     const initial = {
@@ -504,6 +506,8 @@ export function PaymentSettingsSection({
       WaffoPancakeReturnURL: removeTrailingSlash(
         initialRef.current.WaffoPancakeReturnURL.trim()
       ),
+      WaffoPancakeTopUpCurrency:
+        initialRef.current.WaffoPancakeTopUpCurrency || 'USD',
     }
 
     const updates: Array<{ key: string; value: string | number | boolean }> = []
@@ -705,6 +709,8 @@ export function PaymentSettingsSection({
       sanitized.WaffoPancakeMerchantID !== initial.WaffoPancakeMerchantID ||
       sanitized.WaffoPancakePrivateKey.length > 0 ||
       sanitized.WaffoPancakeReturnURL !== initial.WaffoPancakeReturnURL ||
+      sanitized.WaffoPancakeTopUpCurrency !==
+        initial.WaffoPancakeTopUpCurrency ||
       waffoPancakeSelection.storeID !== waffoPancakeSavedBinding.storeID ||
       waffoPancakeSelection.productID !== waffoPancakeSavedBinding.productID
 
@@ -738,6 +744,7 @@ export function PaymentSettingsSection({
         returnURL: sanitized.WaffoPancakeReturnURL,
         storeID: waffoPancakeSelection.storeID,
         productID: waffoPancakeSelection.productID,
+        topUpCurrency: sanitized.WaffoPancakeTopUpCurrency,
       })
 
       if (
@@ -794,6 +801,7 @@ export function PaymentSettingsSection({
     WaffoPancakeMerchantID: currentFormValues.WaffoPancakeMerchantID,
     WaffoPancakePrivateKey: currentFormValues.WaffoPancakePrivateKey,
     WaffoPancakeReturnURL: currentFormValues.WaffoPancakeReturnURL,
+    WaffoPancakeTopUpCurrency: currentFormValues.WaffoPancakeTopUpCurrency,
   }
 
   return (

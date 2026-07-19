@@ -46,6 +46,7 @@ export type WaffoPancakeSettingsValues = {
   WaffoPancakeMerchantID: string
   WaffoPancakePrivateKey: string
   WaffoPancakeReturnURL: string
+  WaffoPancakeTopUpCurrency: 'USD' | 'CNY'
 }
 
 export interface WaffoPancakeBinding {
@@ -295,6 +296,7 @@ export function WaffoPancakeSettingsSection({
         merchantID,
         privateKey,
         returnURL: trimmedReturn,
+        topUpCurrency: values.WaffoPancakeTopUpCurrency,
       })
       if (
         body?.message === 'success' &&
@@ -448,6 +450,28 @@ export function WaffoPancakeSettingsSection({
               'The environment (test vs production) is decided by the key you paste here — use the Test key while integrating, then swap to the Production key when going live.'
             )}
           </p>
+        </div>
+
+        <div className='grid gap-1.5'>
+          <Label>{t('Currency')}</Label>
+          <Select
+            items={[
+              { value: 'USD', label: 'USD' },
+              { value: 'CNY', label: 'CNY' },
+            ]}
+            value={values.WaffoPancakeTopUpCurrency}
+            onValueChange={(value) =>
+              onValueChange('WaffoPancakeTopUpCurrency', value ?? 'USD')
+            }
+          >
+            <SelectTrigger className='w-full'>
+              <SelectValue placeholder={t('Currency')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='USD'>USD</SelectItem>
+              <SelectItem value='CNY'>CNY</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/*
